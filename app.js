@@ -115,6 +115,7 @@ app.post("/login/", async (request, response) => {
 app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
   const { payload } = request;
   const { user_id, name, username, gender } = payload;
+  console.log(payload.user_id);
   console.log(name);
   const getTweetsFeedQuery = `
         SELECT 
@@ -129,7 +130,7 @@ app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
             date_time DESC
         LIMIT 4    
             ;`;
-
+  //console.log(`${user_id}`);
   const tweetFeedArray = await db.all(getTweetsFeedQuery);
   response.send(tweetFeedArray);
 });
@@ -187,7 +188,7 @@ app.get("/tweets/:tweetId/", authenticateToken, async (request, response) => {
         WHERE 
             follower.follower_user_id  = ${user_id} 
     ;`;
-
+  console.log(user_id);
   const userFollowers = await db.all(userFollowersQuery);
   // response.send(userFollowers);
 
@@ -211,7 +212,7 @@ app.get("/tweets/:tweetId/", authenticateToken, async (request, response) => {
             WHERE 
                 tweet.tweet_id = ${tweetId} AND tweet.user_id=${userFollowers[0].user_id}
             ;`;
-
+    console.log(userFollowers[0].user_id);
     const tweetDetails = await db.get(getTweetDetailsQuery);
     response.send(tweetDetails);
   } else {
@@ -228,7 +229,7 @@ app.get(
     const { tweetId } = request;
     const { payload } = request;
     const { user_id, name, username, gender } = payload;
-    console.log(name, tweetId);
+    //console.log(name, tweetId);
     const getLikedUsersQuery = `
             SELECT 
                *
@@ -238,8 +239,9 @@ app.get(
             WHERE 
             tweet.tweet_id = ${tweetId} AND follower.follower_user_id = ${user_id}
     ;`;
+    console.log(user_id);
     const likedUsers = await db.all(getLikedUsersQuery);
-    console.log(likedUsers);
+    // console.log(likedUsers);
     if (likedUsers.length !== 0) {
       let likes = [];
       const getNamesArray = (likedUsers) => {
@@ -288,6 +290,8 @@ app.get(
           replies.push(object);
         }
       };
+      console.log(user_id);
+      console.log(tweetId);
       getNamesArray(repliedUsers);
       response.send({ replies });
     } else {
@@ -308,10 +312,15 @@ app.get("/user/tweets/", authenticateToken, async (request, response) => {
                 COUNT(DISTINCT(reply.reply_id)) AS replies,
                 tweet.date_time AS dateTime
             FROM 
-                tweet INNER JOIN like ON tweet.tweet_id = like.tweet_id INNER JOIN reply ON reply.tweet_id = tweet.tweet_id
+                user INNER JOIN tweet ON user.user_id = tweet.user_id 
+                INNER JOIN like ON like.tweet_id = tweet.tweet_id
+                 INNER JOIN reply ON reply.tweet_id = tweet.tweet_id
             WHERE 
-                 tweet.user_id=${user_id}
+                user.user_id = ${user_id}
+            GROUP BY
+                tweet.tweet_id
             ;`;
+  console.log(user_id);
   const tweetsDetails = await db.all(getTweetsDetailsQuery);
   response.send(tweetsDetails);
 });
